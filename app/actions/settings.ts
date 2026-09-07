@@ -15,7 +15,7 @@ export async function saveSettings(_prev: ActionState, fd: FormData): Promise<Ac
     .eq('id', userId);
   if (error) return { ok: false, error: 'Could not save your settings. Try again.' };
 
-  revalidatePath('/');
+  revalidatePath('/dashboard');
   revalidatePath('/settings');
   return { ok: true };
 }

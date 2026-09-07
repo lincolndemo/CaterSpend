@@ -8,7 +8,7 @@ import { CUSTOM_CATEGORY_COLORS } from '@/lib/types';
 function refresh() {
   revalidatePath('/settings');
   revalidatePath('/expenses');
-  revalidatePath('/');
+  revalidatePath('/dashboard');
 }
 
 export async function createCategory(_prev: ActionState, fd: FormData): Promise<ActionState> {
