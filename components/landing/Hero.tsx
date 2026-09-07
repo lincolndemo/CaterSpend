@@ -12,7 +12,7 @@ const CHIPS = [
 
 export function Hero() {
   return (
-    <section className="relative pb-20 pt-8 lg:pb-16 lg:pt-12">
+    <section className="relative isolate pb-20 pt-8 lg:pb-16 lg:pt-12">
       {/*
         HERO ATMOSPHERE — the one element to change if a real photograph is ever
         licensed. The mockup composed this hero over food photography; none is
@@ -20,6 +20,14 @@ export function Hero() {
         sage radial gradients and `.land-grain` adds a faint SVG noise. Swapping in
         a photo means editing that one CSS rule. It reaches up behind the
         transparent header via the negative top offset.
+
+        `isolate` on the section is load-bearing, not decoration. Without it the
+        nearest stacking context is <html>, so this `-z-10` layer paints at step 2
+        of the CSS painting order and the opaque backgrounds of the page wrapper
+        (app/page.tsx) and `html, body` (globals.css) paint over it at step 3 —
+        the gradients are never seen. `isolate` creates a stacking context on the
+        section, so `-z-10` resolves here: above the section's own transparent
+        background, below the section's content. Do not remove it.
       */}
       <div aria-hidden="true" className="land-hero-bg land-grain absolute inset-x-0 -top-28 bottom-0 -z-10" />
 

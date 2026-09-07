@@ -186,16 +186,22 @@ html, body {
 
 /* Focus rings must stay visible against both the cream ground and the brown
    panels, so the landing page states them explicitly rather than relying on the
-   browser default, which disappears on the deep-brown CTA band. */
+   browser default, which disappears on the deep-brown CTA band.
+
+   These rules deliberately set `outline` only. They are unlayered — written
+   after `@import "tailwindcss"` — so any declaration here beats every Tailwind
+   utility in `@layer utilities` regardless of specificity. A `border-radius`
+   here therefore overrode `rounded-full` on the pill buttons and `rounded-2xl`
+   on the login card, so a keyboard user watched them change shape on focus. Do
+   not reintroduce one: browsers already draw the outline following the
+   element's own radius, so a pill gets a pill-shaped ring for free. */
 .land-focus:focus-visible {
   outline: 2px solid var(--land-gold-ink);
   outline-offset: 3px;
-  border-radius: 10px;
 }
 .land-focus-invert:focus-visible {
   outline: 2px solid var(--land-gold-bright);
   outline-offset: 3px;
-  border-radius: 10px;
 }
 
 @media (prefers-reduced-motion: reduce) {
