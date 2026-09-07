@@ -45,7 +45,11 @@ export async function signUp(_prev: ActionState, fd: FormData): Promise<ActionSt
 
 export async function signOut(): Promise<void> {
   const supabase = await createServerSupabase();
-  await supabase.auth.signOut();
+  // Not thrown: @supabase/ssr clears the session cookies through setAll regardless of what the
+  // auth server says, so this browser is signed out either way, and an already-expired session
+  // makes signOut fail with nothing actually wrong. Log it so a systematic failure is visible.
+  const { error } = await supabase.auth.signOut();
+  if (error) console.error('[signOut] revoke failed:', error.message);
   revalidatePath('/', 'layout');
   redirect('/login');
 }

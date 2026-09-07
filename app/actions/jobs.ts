@@ -31,8 +31,16 @@ export async function updateJob(_prev: ActionState, fd: FormData): Promise<Actio
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
   const { supabase } = await requireUser();
-  const { error } = await supabase.from('jobs').update(parsed.value).eq('id', id);
+  const { error, count } = await supabase
+    .from('jobs')
+    .update(parsed.value, { count: 'exact' })
+    .eq('id', id);
   if (error) return { ok: false, error: 'Could not save that job. Try again.' };
+
+  // An UPDATE that matches no row is not a PostgREST error — it returns 204 with a zero count.
+  // The row may have been deleted from another tab, or RLS may exclude it. Either way nothing was
+  // written, so do not tell the user it was saved.
+  if (!count) return { ok: false, error: 'Could not save that job. Try again.' };
 
   refresh();
   return { ok: true };
@@ -42,6 +50,10 @@ export async function deleteJob(fd: FormData): Promise<void> {
   const id = String(fd.get('id') ?? '');
   if (!id) return;
   const { supabase } = await requireUser();
-  await supabase.from('jobs').delete().eq('id', id);
+  // No ActionState channel here (ConfirmButton posts to a void action), so a genuine failure is
+  // thrown into app/(app)/error.tsx rather than swallowed. A zero-row delete is deliberately not
+  // treated as a failure: the row is already gone, which is what the user asked for.
+  const { error } = await supabase.from('jobs').delete().eq('id', id);
+  if (error) throw new Error(error.message);
   refresh();
 }

@@ -11,7 +11,19 @@ export const dynamic = 'force-dynamic';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { supabase, userId } = await requireUser();
-  const { data: profile } = await supabase.from('profiles').select('business_name').eq('id', userId).single();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('business_name')
+    .eq('id', userId)
+    .single();
+
+  // Deliberately not thrown. This read only feeds the name chip in the header chrome; throwing
+  // would replace the whole shell — Nav, theme toggle, sign out — over a cosmetic value. The page
+  // beneath calls loadWorkspace(), which reads the same row and does throw into
+  // app/(app)/error.tsx if profiles is genuinely unreadable, so a real outage still surfaces. Log
+  // it so a systematically failing read is visible in the server logs instead of silently showing
+  // every user the placeholder forever.
+  if (error) console.error('[layout] profiles read failed:', error.message);
 
   return (
     <div className="min-h-dvh">

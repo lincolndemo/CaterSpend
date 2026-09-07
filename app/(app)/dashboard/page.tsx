@@ -9,8 +9,18 @@ import { lastNMonthKeys, monthKey, todayISO } from '@/lib/dates';
 import { formatNaira } from '@/lib/money';
 import { categoryTotals, jobFigures, monthlyTotals, sumAmounts } from '@/lib/totals';
 
+// Shown when loadWorkspace() hit a row ceiling, so the figures below are computed from a partial
+// set. Better a visible warning than a confidently wrong number.
+function TruncationNotice() {
+  return (
+    <p role="status" className="card border-[var(--gold)] p-4 text-sm text-[var(--ink-600)]">
+      You have more records than this page can load at once, so these figures may be incomplete.
+    </p>
+  );
+}
+
 export default async function DashboardPage() {
-  const { profile, categories, jobs, expenses, income } = await loadWorkspace();
+  const { profile, categories, jobs, expenses, income, truncated } = await loadWorkspace();
 
   const today = todayISO();
   const thisMonth = monthKey(today);
@@ -45,6 +55,8 @@ export default async function DashboardPage() {
       <h1 className="font-[family-name:var(--font-display)] text-2xl">
         {profile.business_name ?? 'Dashboard'}
       </h1>
+
+      {truncated && <TruncationNotice />}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Spent this month" value={formatNaira(spent)} hint={`${monthExpenses.length} records`} />

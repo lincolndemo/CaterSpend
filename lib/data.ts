@@ -9,7 +9,30 @@ export type Workspace = {
   jobs: Job[];
   expenses: Expense[];
   income: Income[];
+  /** True when the expense or income read hit a row ceiling, so every figure may understate. */
+  truncated: boolean;
 };
+
+// PostgREST caps every response at the server's `max-rows` setting and reports the cap nowhere in
+// the response body — the rows simply stop. That is 1000 on the local stack
+// (`supabase/config.toml`) and 1000 by default on a hosted project too. An unbounded read would
+// therefore silently understate the KPIs, the donut, the monthly bars and every job's profit once
+// a caterer crosses that many records, which is the one failure a bookkeeping tool cannot have.
+//
+// So the ceiling is stated here rather than inherited from server configuration, and truncation is
+// detected rather than assumed away — see `isTruncated`. Real pagination and server-side
+// aggregation are deferred past MVP.
+export const EXPORT_LIMIT = 5000;
+
+// `{ count: 'exact' }` puts the true number of matching rows after the slash in `Content-Range`,
+// which postgrest-js surfaces as `count`. Comparing it against what actually arrived catches
+// truncation from either ceiling — the server's `max-rows` or ours — instead of only ours. If the
+// count is missing for any reason, fall back to the length test the ceiling alone allows.
+export function isTruncated(result: { data: unknown[] | null; count: number | null }): boolean {
+  const received = result.data?.length ?? 0;
+  if (result.count !== null) return result.count > received;
+  return received >= EXPORT_LIMIT;
+}
 
 // PostgREST can serialise `numeric` columns as JSON strings depending on configuration, even
 // though the generated types declare them as `number`. Coerce once here, at the data layer,
@@ -101,9 +124,25 @@ export async function loadWorkspace(): Promise<Workspace> {
   const [profile, categories, jobs, expenses, income] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
     supabase.from('categories').select('*').order('sort_order').order('name'),
-    supabase.from('jobs').select('*').order('event_date', { ascending: false, nullsFirst: false }),
-    supabase.from('expenses').select('*').order('date', { ascending: false }),
-    supabase.from('income').select('*').order('date', { ascending: false }),
+    // Postgres guarantees no order for ties, so equal event dates would otherwise let two job
+    // cards swap places between page loads. `created_at` desc reproduces the demo's stable
+    // insertion order. Expenses and income need no tie-break: every consumer re-sorts them
+    // through `byDateDesc`, which already breaks date ties on `created_at`.
+    supabase
+      .from('jobs')
+      .select('*')
+      .order('event_date', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('expenses')
+      .select('*', { count: 'exact' })
+      .order('date', { ascending: false })
+      .range(0, EXPORT_LIMIT - 1),
+    supabase
+      .from('income')
+      .select('*', { count: 'exact' })
+      .order('date', { ascending: false })
+      .range(0, EXPORT_LIMIT - 1),
   ]);
 
   const failure = [profile, categories, jobs, expenses, income].find((r) => r.error);
@@ -116,5 +155,6 @@ export async function loadWorkspace(): Promise<Workspace> {
     jobs: ((jobs.data ?? []) as JobRow[]).map(toJob),
     expenses: ((expenses.data ?? []) as ExpenseRow[]).map(toExpense),
     income: ((income.data ?? []) as IncomeRow[]).map(toIncome),
+    truncated: isTruncated(expenses) || isTruncated(income),
   };
 }
