@@ -11,22 +11,34 @@ const PUBLIC_EXACT = ['/'];
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(toSet) {
-          for (const { name, value } of toSet) request.cookies.set(name, value);
-          response = NextResponse.next({ request });
-          for (const { name, value, options } of toSet) response.cookies.set(name, value, options);
-        },
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // `createServerClient` throws on a missing URL or key, and this runs on every request, so an
+  // unset environment variable does not break sign-in — it returns 500 for the entire site,
+  // marketing page included, with `MIDDLEWARE_INVOCATION_FAILED` and no hint as to which variable.
+  // Passing through instead keeps the public pages up and confines the failure to the routes that
+  // genuinely need a database, where the error boundary can say so.
+  if (!url || !anonKey) {
+    console.error(
+      '[middleware] NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is not set. ' +
+        'Set both in the deployment environment and redeploy; no route that needs a session will work until then.',
+    );
+    return response;
+  }
+
+  const supabase = createServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(toSet) {
+        for (const { name, value } of toSet) request.cookies.set(name, value);
+        response = NextResponse.next({ request });
+        for (const { name, value, options } of toSet) response.cookies.set(name, value, options);
       },
     },
-  );
+  });
 
   const {
     data: { user },
