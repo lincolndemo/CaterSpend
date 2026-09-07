@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { ChefHat } from './icons';
-import { DISPLAY, PRIMARY_BTN } from './styles';
+import { Logo } from '@/components/ui/Logo';
+import { PRIMARY_BTN } from './styles';
 
 /**
  * Transparent header sitting over the hero.
@@ -15,30 +15,25 @@ import { DISPLAY, PRIMARY_BTN } from './styles';
  * and both destinations are a short scroll away on a phone; the two controls
  * that matter (Log in, Start Tracking) stay visible at every width.
  *
- * The "CaterSpend" wordmark is hidden below 360px. At 320px the wordmark plus
- * the shrink-0 right group overflowed the shell by roughly 55px, and the page
- * wrapper clips rather than scrolls, so the "Start Tracking" button was cut off
- * and unreachable. The chef-hat mark keeps the home link present and named
- * (`aria-label`), so nothing is lost to assistive technology. The breakpoint is
- * 360px rather than `sm` (640px) so the wordmark still shows on every ordinary
- * phone, including the 375px width the brief names as the floor.
+ * The brand lockup is the shared `Logo` component, so this header, the app shell
+ * and the auth screens all show the same mark and all link to the same place.
+ *
+ * It replaced a chef-hat circle plus a separate "CaterSpend" wordmark that had to
+ * be hidden below 360px: at 320px the pair plus the shrink-0 right group
+ * overflowed the shell by roughly 55px, and the page wrapper clips rather than
+ * scrolls, so "Start Tracking" was cut off and unreachable. The lockup is about
+ * 96px wide at `h-8` against roughly 150px for the old pair, so it fits at 320px
+ * with room to spare and needs no responsive hiding — the wordmark now survives
+ * at every width instead of disappearing on the narrowest phones.
+ *
+ * `priority` is set because the lockup sits in the hero viewport; without it Next
+ * lazy-loads the image and the brand pops in after first paint.
  */
 export function LandingHeader() {
   return (
     <header className="relative z-10">
       <div className="land-shell flex items-center justify-between gap-4 py-5">
-        <Link
-          href="/"
-          className="land-focus flex items-center gap-2.5 text-[var(--land-ink)]"
-          aria-label="CaterSpend home"
-        >
-          <span className="grid size-8 place-items-center rounded-full bg-[var(--land-brown)] text-[var(--land-on-brown)] sm:size-9">
-            <ChefHat className="size-4.5 sm:size-5" />
-          </span>
-          <span className={`${DISPLAY} hidden text-lg font-semibold tracking-tight min-[360px]:inline sm:text-xl`}>
-            CaterSpend
-          </span>
-        </Link>
+        <Logo className="h-8 w-auto sm:h-9" priority />
 
         <nav aria-label="Sections" className="hidden md:flex items-center gap-8">
           <a

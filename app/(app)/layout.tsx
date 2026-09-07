@@ -1,3 +1,4 @@
+import { Logo } from '@/components/ui/Logo';
 import { Nav } from '@/components/ui/Nav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { signOut } from '@/app/actions/auth';
@@ -29,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-dvh">
       <header className="border-b border-[var(--line)] bg-[var(--surface)]">
         <div className="shell flex items-center justify-between py-4">
-          <span className="font-[family-name:var(--font-display)] text-xl">CaterSpend</span>
+          <Logo className="h-8 w-auto" />
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <span className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-600)]">

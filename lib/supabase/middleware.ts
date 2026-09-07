@@ -55,9 +55,13 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Signed in, so the landing page and the auth screens have nothing to offer: send them
-  // to the dashboard instead.
-  if (user && (path === '/' || path === '/login' || path === '/signup')) {
+  // Signed in, so the auth screens have nothing to offer: send them to the dashboard instead.
+  //
+  // '/' is deliberately NOT in this list. The logo in the app shell links to the landing page from
+  // every signed-in screen, and bouncing '/' to /dashboard would make that link a no-op that
+  // returns the user to the page they were already on. The landing page is a real destination for
+  // an owner who wants to show someone what the product is, so it stays reachable while signed in.
+  if (user && (path === '/login' || path === '/signup')) {
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     url.search = '';

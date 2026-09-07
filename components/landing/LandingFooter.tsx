@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { ChefHat } from './icons';
-import { DISPLAY, SCRIPT } from './styles';
+import { Logo } from '@/components/ui/Logo';
+import { SCRIPT } from './styles';
 
 /**
  * The mockup's footer also carried social icons and Blog and Support links.
@@ -13,12 +13,7 @@ export function LandingFooter() {
     <footer className="border-t border-[var(--land-line)] bg-[var(--land-cream)] py-12">
       <div className="land-shell">
         <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex items-center gap-2.5 text-[var(--land-ink)]">
-            <span className="grid size-9 place-items-center rounded-full bg-[var(--land-brown)] text-[var(--land-on-brown)]">
-              <ChefHat className="size-5" />
-            </span>
-            <span className={`${DISPLAY} text-xl font-semibold`}>CaterSpend</span>
-          </span>
+          <Logo className="h-9 w-auto" />
 
           <span aria-hidden="true" className="my-1 h-px w-full max-w-xs bg-[var(--land-line)]" />
 
