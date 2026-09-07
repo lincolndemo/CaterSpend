@@ -4,11 +4,18 @@ import type { MonthBucket } from '@/lib/totals';
 export function MonthlyBars({ buckets, currentKey }: { buckets: MonthBucket[]; currentKey: string }) {
   const max = Math.max(1, ...buckets.map((b) => Math.max(b.expense, b.income)));
 
+  // role="img" hides its children from the accessibility tree entirely, so every
+  // month's figures must be summarised here in text form rather than left to the
+  // (mouse-only) title attributes on the bars below.
+  const summary = buckets
+    .map((b) => `${b.label}: expenses ${formatNairaCompact(b.expense)}, income ${formatNairaCompact(b.income)}`)
+    .join('; ');
+
   return (
     <div className="card grid gap-4 p-5">
       <h2 className="font-medium">Last six months</h2>
 
-      <div className="flex items-end gap-3" role="img" aria-label="Expenses and income by month">
+      <div className="flex items-end gap-3" role="img" aria-label={`Expenses and income by month. ${summary}.`}>
         {buckets.map((b) => (
           <div key={b.key} className="flex flex-1 flex-col items-center gap-1.5">
             <span className="num text-xs text-[var(--ink-mute)]">{formatNairaCompact(b.expense)}</span>
