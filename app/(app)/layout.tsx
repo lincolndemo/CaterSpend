@@ -1,15 +1,18 @@
 import { Nav } from '@/components/ui/Nav';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { signOut } from '@/app/actions/auth';
+import { requireUser } from '@/lib/supabase/server';
 
 // Force dynamic rendering: loadWorkspace() and todayISO() must run per request, not once at
 // build time, or "this month" KPIs, the six-month chart labels and the current-month bar all
-// freeze at build-time values. The in-memory data store that Server Actions mutate is also
-// process-local, so a static build would serve a dashboard that never reflects writes. Once
-// Supabase auth lands, the session cookie will force dynamic rendering on its own and this can
-// be revisited (though it will likely still be desirable to keep explicit).
+// freeze at build-time values. The Supabase session cookie also forces dynamic rendering on its
+// own, but keeping this explicit avoids relying on that side effect.
 export const dynamic = 'force-dynamic';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const { supabase, userId } = await requireUser();
+  const { data: profile } = await supabase.from('profiles').select('business_name').eq('id', userId).single();
+
   return (
     <div className="min-h-dvh">
       <header className="border-b border-[var(--line)] bg-[var(--surface)]">
@@ -18,8 +21,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <span className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-600)]">
-              Demo
+              {profile?.business_name ?? 'Your business'}
             </span>
+            <form action={signOut}>
+              <button className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-sm text-[var(--ink-600)]">
+                Sign out
+              </button>
+            </form>
           </div>
         </div>
         <div className="shell">

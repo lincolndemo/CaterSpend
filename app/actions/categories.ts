@@ -1,9 +1,9 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requireUser } from '@/lib/supabase/server';
 import { ERRORS, parseCategoryForm, type ActionState } from '@/lib/validation';
-import { CUSTOM_CATEGORY_COLORS, DEMO_USER_ID, demoId, store, touch } from '@/lib/demo-store';
-import type { Category } from '@/lib/types';
+import { CUSTOM_CATEGORY_COLORS } from '@/lib/types';
 
 function refresh() {
   revalidatePath('/settings');
@@ -15,22 +15,20 @@ export async function createCategory(_prev: ActionState, fd: FormData): Promise<
   const parsed = parseCategoryForm(fd);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const name = parsed.value.name;
-  // Mirrors the schema's `unique (user_id, lower(btrim(name)))` index.
-  const duplicate = store.categories.some((c) => c.name.trim().toLowerCase() === name.toLowerCase());
-  if (duplicate) return { ok: false, error: ERRORS.duplicateCategory };
-
-  const category: Category = {
-    id: demoId('cat'),
-    user_id: DEMO_USER_ID,
-    name,
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase.from('categories').insert({
+    user_id: userId,
+    name: parsed.value.name,
     is_builtin: false,
     color_light: CUSTOM_CATEGORY_COLORS.light,
     color_dark: CUSTOM_CATEGORY_COLORS.dark,
     sort_order: 100,
-    created_at: touch(),
-  };
-  store.categories.push(category);
+  });
+
+  if (error) {
+    if (error.code === '23505') return { ok: false, error: ERRORS.duplicateCategory };
+    return { ok: false, error: 'Could not add that category. Try again.' };
+  }
 
   refresh();
   return { ok: true };
@@ -40,18 +38,17 @@ export async function deleteCategory(_prev: ActionState, fd: FormData): Promise<
   const id = String(fd.get('id') ?? '');
   if (!id) return { ok: false, error: 'Could not remove that category.' };
 
-  const category = store.categories.find((c) => c.id === id);
-  if (!category) return { ok: false, error: 'Could not remove that category.' };
+  const { supabase } = await requireUser();
+  const { error, count } = await supabase.from('categories').delete({ count: 'exact' }).eq('id', id);
 
-  // Built-in categories cannot be deleted (mirrors the schema's guarded delete policy).
-  if (category.is_builtin) return { ok: false, error: 'Could not remove that category.' };
+  if (error) {
+    if (error.code === '23503') return { ok: false, error: ERRORS.categoryInUse };
+    return { ok: false, error: 'Could not remove that category.' };
+  }
 
-  // Mirrors the `on delete restrict` FK from expenses to categories.
-  const inUse = store.expenses.some((e) => e.category_id === id);
-  if (inUse) return { ok: false, error: ERRORS.categoryInUse };
-
-  const index = store.categories.findIndex((c) => c.id === id);
-  store.categories.splice(index, 1);
+  // Built-in categories are protected by the `categories_delete` RLS policy (`not is_builtin`):
+  // a blocked delete matches zero rows rather than raising an error.
+  if (!count) return { ok: false, error: 'Could not remove that category.' };
 
   refresh();
   return { ok: true };
