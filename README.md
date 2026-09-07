@@ -42,11 +42,11 @@ npm run e2e                # playwright happy path — needs the dev server and 
 ```
 
 **`npm test`, `npm run typecheck` and `npm run build` are the suites that run
-anywhere.** All three are green: 89 unit tests across 9 files.
+anywhere.** All three are green: 107 unit tests across 11 files.
 
 **`test:integration` and `e2e` have not been executed on this machine.** Both
 need a local Postgres, which means Docker Desktop, which is not installed here.
-The suites are written, collected by their runners (11 integration tests, 1 e2e
+The suites are written, collected by their runners (13 integration tests, 1 e2e
 spec) and typecheck clean, but nothing has run them end to end. Run them once
 you have `npx supabase start` working, and expect to fix selector details in the
 e2e spec on first contact — those assertions were derived by reading the
@@ -64,18 +64,28 @@ way, so its migration history is empty — before the first `db push` to it, run
 `npx supabase migration repair --status applied 0001` or the push will try to
 apply `0001_init.sql` a second time and fail on the existing objects.
 
-In Auth settings, enable email and password sign-in, and add both
-`http://localhost:3000` and the Vercel domain to the redirect allow list. Leave
-"Confirm email" on for production; turn it off only for a throwaway test
+In Auth settings, enable email and password sign-in, and add the production
+domain to the redirect allow list — **that domain only**. Do not add
+`http://localhost:3000` to a production project. Allow-listing it turns a
+misaddressed confirmation link into a silent failure: Supabase accepts the
+redirect, the email goes out, and the user clicks through to their own machine
+where nothing is listening. Left off the list, the same mistake is rejected
+outright and you see it on your first test signup. For local work, use a
+separate development project and allow-list localhost there.
+
+Leave "Confirm email" on for production; turn it off only for a throwaway test
 project.
 
-**Vercel.** Import the repo. Set two environment variables, both public:
+**Vercel.** Import the repo. Set these environment variables, all public:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-Optionally set `NEXT_PUBLIC_SITE_URL` to the production origin so confirmation
-emails link back to the deployed app rather than `http://localhost:3000`.
+- `NEXT_PUBLIC_SITE_URL` — recommended. The origin confirmation emails link back
+  to. Leave it unset and the app derives the origin from the request it is
+  serving, using the `x-forwarded-proto` and `x-forwarded-host` headers Vercel
+  sets, which is correct for a normal deployment. Set it to override that when
+  something in front of the app rewrites or drops those headers, or to pin a
+  custom domain rather than whichever hostname the request arrived on.
 
 Do not set a service-role key. Nothing in the application uses one, and adding
 one to the environment would put a key that bypasses every RLS policy next to
