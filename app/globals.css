@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --page: #F7F5EC;
+  --surface: #FFFFFF;
+  --surface-2: #F1EFE3;
+  --ink-900: #17211D;
+  --ink-600: #52584F;
+  --ink-mute: #6B6F64;
+  --line: #E2DFD1;
+  --accent: #146B5C;
+  --accent-hover: #0F5548;
+  --accent-soft: #E3EFEA;
+  --gold: #A5680F;
+  --good: #0A7A0A;
+  --warning: #93600A;
+  --critical: #B23A3A;
+  --radius: 14px;
+  color-scheme: light;
+}
+
+.dark {
+  --page: #101513;
+  --surface: #1A211E;
+  --surface-2: #222B26;
+  --ink-900: #ECF1EE;
+  --ink-600: #B3BCB6;
+  --ink-mute: #8B958E;
+  --line: #2C352F;
+  --accent: #35A88E;
+  --accent-hover: #46BCA1;
+  --accent-soft: #1B322C;
+  --gold: #E0A94A;
+  --good: #4FBE6A;
+  --warning: #D6A63C;
+  --critical: #E4837A;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink-900: var(--ink-900);
+  --color-ink-600: var(--ink-600);
+  --color-ink-mute: var(--ink-mute);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --color-good: var(--good);
+  --color-warning: var(--warning);
+  --color-critical: var(--critical);
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+html, body {
+  background: var(--page);
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+}
+
+.shell {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Category colours come in light/dark pairs. Server components set both as
+   custom properties; these rules pick the right one for the active theme. */
+.dot {
+  background: var(--slice-light);
+}
+.dark .dot {
+  background: var(--slice-dark);
+}
+.slice {
+  stroke: var(--slice-light);
+}
+.dark .slice {
+  stroke: var(--slice-dark);
+}
