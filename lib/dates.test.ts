@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   parseDateLocal,
   formatDateShort,
@@ -54,6 +54,16 @@ describe('lastNMonthKeys', () => {
   it('crosses the year boundary', () => {
     expect(lastNMonthKeys(3, '2026-01-15')).toEqual(['2025-11', '2025-12', '2026-01']);
   });
+  it('defaults to the Lagos calendar month, not the runtime one', () => {
+    // 23:30 UTC on 31 August is already September in Lagos, so the window must end at 2026-09.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-31T23:30:00Z'));
+    try {
+      expect(lastNMonthKeys(2)).toEqual(['2026-08', '2026-09']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('isSameMonth', () => {
@@ -64,8 +74,38 @@ describe('isSameMonth', () => {
 });
 
 describe('todayISO', () => {
+  const originalTZ = process.env.TZ;
+
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalTZ === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTZ;
+  });
+
   it('returns a YYYY-MM-DD string', () => {
     expect(todayISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('reports the Lagos calendar day, not the runtime one', () => {
+    // 23:30 UTC on the 5th is 00:30 WAT on the 6th. Vercel runs UTC; the business is in Nigeria.
+    // Before the timezone was pinned, this hour is exactly when a form defaulted to yesterday.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-05T23:30:00Z'));
+
+    for (const tz of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
+      process.env.TZ = tz;
+      expect(todayISO()).toBe('2026-09-06');
+    }
+  });
+
+  it('is unaffected by the process timezone at any hour', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-15T12:00:00Z'));
+
+    for (const tz of ['UTC', 'America/New_York', 'Asia/Tokyo']) {
+      process.env.TZ = tz;
+      expect(todayISO()).toBe('2026-01-15');
+    }
   });
 });
 
