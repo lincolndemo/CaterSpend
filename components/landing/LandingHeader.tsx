@@ -14,6 +14,14 @@ import { DISPLAY, PRIMARY_BTN } from './styles';
  * The anchor nav is hidden below `md`. A drawer would need client JavaScript,
  * and both destinations are a short scroll away on a phone; the two controls
  * that matter (Log in, Start Tracking) stay visible at every width.
+ *
+ * The "CaterSpend" wordmark is hidden below 360px. At 320px the wordmark plus
+ * the shrink-0 right group overflowed the shell by roughly 55px, and the page
+ * wrapper clips rather than scrolls, so the "Start Tracking" button was cut off
+ * and unreachable. The chef-hat mark keeps the home link present and named
+ * (`aria-label`), so nothing is lost to assistive technology. The breakpoint is
+ * 360px rather than `sm` (640px) so the wordmark still shows on every ordinary
+ * phone, including the 375px width the brief names as the floor.
  */
 export function LandingHeader() {
   return (
@@ -27,7 +35,9 @@ export function LandingHeader() {
           <span className="grid size-8 place-items-center rounded-full bg-[var(--land-brown)] text-[var(--land-on-brown)] sm:size-9">
             <ChefHat className="size-4.5 sm:size-5" />
           </span>
-          <span className={`${DISPLAY} text-lg font-semibold tracking-tight sm:text-xl`}>CaterSpend</span>
+          <span className={`${DISPLAY} hidden text-lg font-semibold tracking-tight min-[360px]:inline sm:text-xl`}>
+            CaterSpend
+          </span>
         </Link>
 
         <nav aria-label="Sections" className="hidden md:flex items-center gap-8">

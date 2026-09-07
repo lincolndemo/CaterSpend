@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react';
 import Link from 'next/link';
-import { IDLE_STATE, type ActionState } from '@/lib/validation';
+import { BUSINESS_NAME_MAX, IDLE_STATE, type ActionState } from '@/lib/validation';
 
 type Props = {
   mode: 'login' | 'signup';
@@ -28,6 +28,7 @@ export function AuthForm({ mode, action }: Props) {
           <span className="text-[var(--ink-600)]">Business name</span>
           <input
             name="business_name"
+            maxLength={BUSINESS_NAME_MAX}
             className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2"
             placeholder="Chioma Catering"
           />

@@ -2,10 +2,11 @@ import { Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { IncomeForm } from '@/components/income/IncomeForm';
 import { IncomeList } from '@/components/income/IncomeList';
+import { TruncationNotice } from '@/components/ui/TruncationNotice';
 import { loadWorkspace } from '@/lib/data';
 
 export default async function IncomePage() {
-  const { income, jobs } = await loadWorkspace();
+  const { income, jobs, truncated } = await loadWorkspace();
 
   return (
     <div className="grid gap-5">
@@ -22,6 +23,9 @@ export default async function IncomePage() {
           <IncomeForm mode="create" jobs={jobs} />
         </Dialog>
       </div>
+
+      {/* The list below, and the totals it prints, are built from a possibly-partial array. */}
+      {truncated && <TruncationNotice />}
 
       <IncomeList income={income} jobs={jobs} />
     </div>

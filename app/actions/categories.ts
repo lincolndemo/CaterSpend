@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/supabase/server';
+import { wroteNoRows } from '@/lib/data';
 import { ERRORS, parseCategoryForm, type ActionState } from '@/lib/validation';
 import { CUSTOM_CATEGORY_COLORS } from '@/lib/types';
 
@@ -47,8 +48,9 @@ export async function deleteCategory(_prev: ActionState, fd: FormData): Promise<
   }
 
   // Built-in categories are protected by the `categories_delete` RLS policy (`not is_builtin`):
-  // a blocked delete matches zero rows rather than raising an error.
-  if (!count) return { ok: false, error: ERRORS.categoryNotRemoved };
+  // a blocked delete matches zero rows rather than raising an error. See `wroteNoRows` for why
+  // only a definite zero qualifies.
+  if (wroteNoRows(count)) return { ok: false, error: ERRORS.categoryNotRemoved };
 
   refresh();
   return { ok: true };

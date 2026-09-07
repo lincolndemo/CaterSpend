@@ -34,10 +34,13 @@ export function HowItWorks() {
       <div className="land-shell">
         <div className="mx-auto max-w-2xl text-center">
           <p className={EYEBROW}>HOW IT WORKS</p>
+          {/* Not "then it runs itself": nothing runs itself. CaterSpend is manual
+              entry, and the second step on this very screen says so. The headline
+              describes the outcome the three steps produce, which is true. */}
           <h2
             className={`${DISPLAY} mt-3 text-[clamp(1.85rem,4.5vw,2.75rem)] font-semibold leading-tight tracking-[-0.015em] text-[var(--land-ink)]`}
           >
-            Three steps, then it runs itself
+            Three steps to a clear picture of your money
           </h2>
           <span aria-hidden="true" className="mx-auto mt-5 block h-0.5 w-16 rounded-full bg-[var(--gold)]" />
         </div>

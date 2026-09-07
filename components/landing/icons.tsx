@@ -92,24 +92,6 @@ export function Play({ className }: IconProps) {
   );
 }
 
-export function Arrow({ className }: IconProps) {
-  return (
-    <svg {...base} className={className}>
-      <path d="M4.5 12h14" />
-      <path d="m13.4 6.8 5.1 5.2-5.1 5.2" />
-    </svg>
-  );
-}
-
-export function Check({ className }: IconProps) {
-  return (
-    <svg {...base} className={className}>
-      <circle cx="12" cy="12" r="8.6" />
-      <path d="m8.2 12.3 2.6 2.6 5-5.4" />
-    </svg>
-  );
-}
-
 export function Shield({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
@@ -125,15 +107,6 @@ export function Gift({ className }: IconProps) {
       <rect x="3.6" y="9.4" width="16.8" height="11" rx="1.8" />
       <path d="M3.6 13.4h16.8M12 9.4v11" />
       <path d="M12 9.4S10.8 5 8.6 5a2 2 0 0 0 0 4.4Zm0 0S13.2 5 15.4 5a2 2 0 0 1 0 4.4Z" />
-    </svg>
-  );
-}
-
-export function Sparkle({ className }: IconProps) {
-  return (
-    <svg {...base} className={className}>
-      <path d="M12 3.4 13.7 9 19.4 10.7 13.7 12.4 12 18.1 10.3 12.4 4.6 10.7 10.3 9Z" />
-      <path d="M18.4 16.2 19.1 18.3 21.2 19 19.1 19.7 18.4 21.8 17.7 19.7 15.6 19 17.7 18.3Z" />
     </svg>
   );
 }

@@ -6,10 +6,36 @@ import { HowItWorks } from '@/components/landing/HowItWorks';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 
+const TITLE = 'CaterSpend — know exactly where your catering money goes';
+const DESCRIPTION =
+  'Track expenses, income and jobs in one simple dashboard built for caterers and food businesses.';
+
+/**
+ * This page's job is to be shared, and in this market that means being pasted
+ * into WhatsApp, which builds its preview card from Open Graph tags. Without
+ * them the link renders as a bare URL.
+ *
+ * No `openGraph.images` and no `openGraph.url`: there is no image asset in the
+ * repo (adding one would be a binary asset outside this change) and no
+ * `metadataBase`/canonical origin is configured, so an absolute URL cannot be
+ * emitted honestly. Title, description and type alone already turn a bare link
+ * into a titled card. An OG image and a `metadataBase` are the natural follow-up
+ * once a deployment domain and artwork exist.
+ */
 export const metadata: Metadata = {
-  title: 'CaterSpend — know exactly where your catering money goes',
-  description:
-    'Track expenses, income and jobs in one simple dashboard built for caterers and food businesses.',
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    type: 'website',
+    siteName: 'CaterSpend',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary',
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 /**

@@ -2,10 +2,11 @@ import { Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { ExpenseForm } from '@/components/expenses/ExpenseForm';
 import { ExpenseList } from '@/components/expenses/ExpenseList';
+import { TruncationNotice } from '@/components/ui/TruncationNotice';
 import { loadWorkspace } from '@/lib/data';
 
 export default async function ExpensesPage() {
-  const { expenses, categories, jobs } = await loadWorkspace();
+  const { expenses, categories, jobs, truncated } = await loadWorkspace();
 
   return (
     <div className="grid gap-5">
@@ -22,6 +23,9 @@ export default async function ExpensesPage() {
           <ExpenseForm mode="create" categories={categories} jobs={jobs} />
         </Dialog>
       </div>
+
+      {/* The list below, and the totals it prints, are built from a possibly-partial array. */}
+      {truncated && <TruncationNotice />}
 
       <ExpenseList expenses={expenses} categories={categories} jobs={jobs} />
     </div>
