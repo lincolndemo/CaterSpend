@@ -5,7 +5,7 @@ import { requireUser } from '@/lib/supabase/server';
 import { parseJobForm, type ActionState } from '@/lib/validation';
 
 function refresh() {
-  revalidatePath('/');
+  revalidatePath('/dashboard');
   revalidatePath('/jobs');
   revalidatePath('/expenses');
   revalidatePath('/income');

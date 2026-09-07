@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Field, inputClass } from '@/components/ui/Field';
 import { SubmitButton } from '@/components/ui/SubmitButton';
 import { saveSettings } from '@/app/actions/settings';
-import { IDLE_STATE } from '@/lib/validation';
+import { BUSINESS_NAME_MAX, IDLE_STATE } from '@/lib/validation';
 import type { Profile } from '@/lib/types';
 
 export function BudgetForm({ profile }: { profile: Profile }) {
@@ -20,7 +20,12 @@ export function BudgetForm({ profile }: { profile: Profile }) {
       <h2 className="font-medium">Business</h2>
 
       <Field label="Business name">
-        <input name="business_name" defaultValue={profile.business_name ?? ''} className={inputClass} />
+        <input
+          name="business_name"
+          maxLength={BUSINESS_NAME_MAX}
+          defaultValue={profile.business_name ?? ''}
+          className={inputClass}
+        />
       </Field>
 
       <Field label="Monthly expense budget (₦, leave blank for none)">

@@ -17,6 +17,31 @@
   --critical: #B23A3A;
   --radius: 14px;
   color-scheme: light;
+
+  /* Landing-page palette. The marketing page is a warm, editorial, food-industry
+     treatment: cream ground, espresso ink, gold accents. It deliberately does NOT
+     use --accent (teal) — that token belongs to the authenticated app. */
+  --land-cream: var(--page);
+  --land-cream-2: #F1E9DB;
+  --land-surface: #FFFFFF;
+  --land-ink: #2B1B12;
+  --land-ink-soft: #6B5648;
+  --land-line: #E6DDCE;
+  --land-tint: #F4EADE;
+  --land-brown: #6B4226;
+  --land-brown-2: #55321B;
+  --land-brown-deep: #3A2317;
+  --land-on-brown: #FFFFFF;
+  --land-on-brown-soft: #E4D8CC;
+  /* --gold is fine as a rule/flourish, but at 4.19:1 on cream it fails 4.5:1 as
+     text, so eyebrows and links use this darker gold instead. */
+  --land-gold-ink: #8A5406;
+  --land-gold-bright: #E8B44A;
+  --land-blush: rgba(214, 150, 116, 0.30);
+  --land-sage: rgba(126, 154, 108, 0.24);
+  --land-glow: rgba(232, 180, 74, 0.30);
+  --land-shadow: 0 1px 2px rgba(58, 35, 23, 0.04), 0 12px 32px rgba(58, 35, 23, 0.07);
+  --land-shadow-lg: 0 2px 6px rgba(58, 35, 23, 0.06), 0 28px 60px rgba(58, 35, 23, 0.14);
 }
 
 .dark {
@@ -35,6 +60,27 @@
   --warning: #D6A63C;
   --critical: #E4837A;
   color-scheme: dark;
+
+  /* Same warm palette shifted darker — roasted rather than inverted. */
+  --land-cream: #14100D;
+  --land-cream-2: #1B1613;
+  --land-surface: #201A16;
+  --land-ink: #F4EAE0;
+  --land-ink-soft: #BDAC9E;
+  --land-line: #35291F;
+  --land-tint: #2C221A;
+  --land-brown: #8A5A38;
+  --land-brown-2: #6E4529;
+  --land-brown-deep: #241A14;
+  --land-on-brown: #FFFFFF;
+  --land-on-brown-soft: #E4D8CC;
+  --land-gold-ink: #E0A94A;
+  --land-gold-bright: #E8B44A;
+  --land-blush: rgba(214, 150, 116, 0.12);
+  --land-sage: rgba(126, 154, 108, 0.10);
+  --land-glow: rgba(232, 180, 74, 0.10);
+  --land-shadow: 0 1px 2px rgba(0, 0, 0, 0.30), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --land-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.35), 0 28px 60px rgba(0, 0, 0, 0.50);
 }
 
 @theme inline {
@@ -55,6 +101,7 @@
   --font-display: 'Fraunces', Georgia, serif;
   --font-sans: 'Public Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-script: 'Caveat', 'Segoe Script', cursive;
 }
 
 html, body {
@@ -93,4 +140,69 @@ html, body {
 }
 .dark .slice {
   stroke: var(--slice-dark);
+}
+
+/* ---------------------------------------------------------------------------
+   Landing page
+   --------------------------------------------------------------------------- */
+
+.land-shell {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  width: 100%;
+}
+
+/* The hero's atmosphere. The mockup composed the hero over food photography;
+   no licensed imagery is available, so the warmth is built from layered radial
+   gradients plus a faint grain. To drop a real photograph in later, replace the
+   `background-image` on .land-hero-bg with
+   `url(/hero.jpg)` (add `background-size: cover`) and keep .land-grain for the
+   texture — nothing else on the page depends on this rule. */
+.land-hero-bg {
+  background-color: var(--land-cream);
+  background-image:
+    radial-gradient(60% 55% at 78% 12%, var(--land-glow) 0%, transparent 62%),
+    radial-gradient(48% 48% at 8% 6%, var(--land-blush) 0%, transparent 65%),
+    radial-gradient(52% 46% at 22% 92%, var(--land-sage) 0%, transparent 68%),
+    linear-gradient(180deg, var(--land-cream-2) 0%, var(--land-cream) 55%);
+}
+
+/* Grain overlay. An inline SVG turbulence rather than a bitmap: no asset, no
+   network request, and it scales at any viewport size. */
+.land-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.30;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.42'/%3E%3C/svg%3E");
+}
+.dark .land-grain::after {
+  mix-blend-mode: screen;
+  opacity: 0.10;
+}
+
+/* Focus rings must stay visible against both the cream ground and the brown
+   panels, so the landing page states them explicitly rather than relying on the
+   browser default, which disappears on the deep-brown CTA band. */
+.land-focus:focus-visible {
+  outline: 2px solid var(--land-gold-ink);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+.land-focus-invert:focus-visible {
+  outline: 2px solid var(--land-gold-bright);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .land-motion,
+  .land-motion * {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
 }

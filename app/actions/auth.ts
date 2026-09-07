@@ -20,7 +20,7 @@ export async function signIn(_prev: ActionState, fd: FormData): Promise<ActionSt
   if (error) return { ok: false, error: 'That email and password do not match.' };
 
   revalidatePath('/', 'layout');
-  redirect('/');
+  redirect('/dashboard');
 }
 
 export async function signUp(_prev: ActionState, fd: FormData): Promise<ActionState> {
