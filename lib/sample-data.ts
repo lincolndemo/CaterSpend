@@ -66,8 +66,13 @@ const INCOME_TEMPLATE: [number, number, number, string, SampleJob['key'], Paymen
  */
 export function buildSampleData(today: string) {
   const months = lastNMonthKeys(4, today);
-  const dateFor = (monthIndex: number, day: number) =>
-    `${months[monthIndex]}-${String(day).padStart(2, '0')}`;
+  const dateFor = (monthIndex: number, day: number) => {
+    // A month key plus a literal day skips the calendar entirely, so a template day of 30 would
+    // produce `2026-02-30` — a string every helper here parses happily and Postgres rejects. Every
+    // month has a 28th; nothing above it is safe without knowing which month it landed in.
+    if (day < 1 || day > 28) throw new RangeError(`sample day ${day} is not in every month`);
+    return `${months[monthIndex]}-${String(day).padStart(2, '0')}`;
+  };
 
   const jobs: SampleJob[] = [
     {

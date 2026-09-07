@@ -56,15 +56,25 @@ export async function loadSampleData(): Promise<void> {
     .select();
   if (jobError || !insertedJobs) throw new Error(jobError?.message ?? 'Could not create sample jobs.');
 
+  const insertedJobIds = insertedJobs.map((j) => j.id);
   const jobIdByName = new Map(insertedJobs.map((j) => [j.name, j.id]));
   const jobIdByKey = new Map(sample.jobs.map((j) => [j.key, jobIdByName.get(j.name) ?? null]));
 
   // Categories are matched by name against the user's own rows, which the signup trigger seeded.
-  // Anything that fails to match is dropped rather than inserted with a null category_id, which the
-  // schema rejects anyway.
-  const { data: categories } = await supabase.from('categories').select('id, name');
-  const categoryIdByName = new Map((categories ?? []).map((c) => [c.name, c.id]));
+  // A failed read here would leave an empty map, every expense row would be dropped as
+  // uncategorised, and the user would get jobs and income with no spending at all — so it is an
+  // abort, not a fallback.
+  const { data: categories, error: categoryError } = await supabase.from('categories').select('id, name');
+  if (categoryError || !categories) {
+    await undo(supabase, insertedJobIds, []);
+    throw new Error(categoryError?.message ?? 'Could not read categories.');
+  }
+  const categoryIdByName = new Map(categories.map((c) => [c.name, c.id]));
 
+  // A name that matches nothing is dropped rather than sent with a null category_id, which the
+  // schema rejects. This only stays unreachable because the seeded categories are `is_builtin` and
+  // the RLS policies in 0001_init.sql refuse to update or delete a built-in — if that ever relaxes,
+  // a user who renamed "Ingredients" would silently get fewer sample expenses.
   const expenseRows = sample.expenses
     .map((e) => ({
       user_id: userId,
@@ -78,6 +88,15 @@ export async function loadSampleData(): Promise<void> {
     }))
     .filter((row): row is typeof row & { category_id: string } => row.category_id !== null);
 
+  const { data: insertedExpenses, error: expenseError } = await supabase
+    .from('expenses')
+    .insert(expenseRows)
+    .select('id');
+  if (expenseError || !insertedExpenses) {
+    await undo(supabase, insertedJobIds, []);
+    throw new Error(expenseError?.message ?? 'Could not create sample expenses.');
+  }
+
   const incomeRows = sample.income.map((i) => ({
     user_id: userId,
     date: i.date,
@@ -87,13 +106,40 @@ export async function loadSampleData(): Promise<void> {
     source: i.source,
   }));
 
-  const [{ error: expenseError }, { error: incomeError }] = await Promise.all([
-    supabase.from('expenses').insert(expenseRows),
-    supabase.from('income').insert(incomeRows),
-  ]);
-  if (expenseError || incomeError) {
-    throw new Error(expenseError?.message ?? incomeError?.message ?? 'Could not create sample records.');
+  const { error: incomeError } = await supabase.from('income').insert(incomeRows);
+  if (incomeError) {
+    await undo(
+      supabase,
+      insertedJobIds,
+      insertedExpenses.map((e) => e.id),
+    );
+    throw new Error(incomeError.message);
   }
 
   refresh();
+}
+
+/**
+ * Compensating delete for a run that failed part way through.
+ *
+ * PostgREST gives each request its own transaction, so these three inserts cannot be made atomic
+ * from here. Without an undo, a failure after the jobs landed would leave the account holding two
+ * jobs and nothing else: no longer empty, so the "Load sample data" button never renders again, and
+ * no way back except deleting the jobs by hand. Undoing costs a couple of round trips on a path
+ * that should never run.
+ *
+ * Best effort by design. If the undo itself fails there is nothing further to try, and the original
+ * error is the one worth showing, so failures here are logged and swallowed rather than thrown.
+ */
+async function undo(
+  supabase: Awaited<ReturnType<typeof requireUser>>['supabase'],
+  jobIds: string[],
+  expenseIds: string[],
+): Promise<void> {
+  try {
+    if (expenseIds.length > 0) await supabase.from('expenses').delete().in('id', expenseIds);
+    if (jobIds.length > 0) await supabase.from('jobs').delete().in('id', jobIds);
+  } catch (err) {
+    console.error('[loadSampleData] could not undo a partial sample load:', err);
+  }
 }
