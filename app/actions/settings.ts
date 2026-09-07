@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requireUser } from '@/lib/supabase/server';
 import { parseBudgetForm, type ActionState } from '@/lib/validation';
-import { store, touch } from '@/lib/demo-store';
 
 export async function saveSettings(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const parsed = parseBudgetForm(fd);
@@ -10,9 +10,12 @@ export async function saveSettings(_prev: ActionState, fd: FormData): Promise<Ac
 
   const businessName = String(fd.get('business_name') ?? '').trim();
 
-  store.profile.business_name = businessName || null;
-  store.profile.monthly_budget = parsed.value.monthly_budget;
-  store.profile.updated_at = touch();
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase
+    .from('profiles')
+    .update({ business_name: businessName || null, monthly_budget: parsed.value.monthly_budget })
+    .eq('id', userId);
+  if (error) return { ok: false, error: 'Could not save your settings. Try again.' };
 
   revalidatePath('/');
   revalidatePath('/settings');

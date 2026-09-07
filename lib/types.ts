@@ -1,6 +1,9 @@
 export const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Debit Card', 'Other'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
+// Colour pair every custom (non-built-in) category gets, per the artifact.
+export const CUSTOM_CATEGORY_COLORS = { light: '#9C7E4C', dark: '#D3AD70' } as const;
+
 export type Profile = {
   id: string;
   business_name: string | null;

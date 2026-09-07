@@ -1,9 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requireUser } from '@/lib/supabase/server';
 import { parseIncomeForm, type ActionState } from '@/lib/validation';
-import { DEMO_USER_ID, demoId, store, touch } from '@/lib/demo-store';
-import type { Income } from '@/lib/types';
 
 function refresh() {
   revalidatePath('/');
@@ -15,15 +14,9 @@ export async function createIncome(_prev: ActionState, fd: FormData): Promise<Ac
   const parsed = parseIncomeForm(fd);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const now = touch();
-  const income: Income = {
-    id: demoId('inc'),
-    user_id: DEMO_USER_ID,
-    ...parsed.value,
-    created_at: now,
-    updated_at: now,
-  };
-  store.income.push(income);
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase.from('income').insert({ ...parsed.value, user_id: userId });
+  if (error) return { ok: false, error: 'Could not save that income. Try again.' };
 
   refresh();
   return { ok: true };
@@ -36,10 +29,9 @@ export async function updateIncome(_prev: ActionState, fd: FormData): Promise<Ac
   const parsed = parseIncomeForm(fd);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const existing = store.income.find((i) => i.id === id);
-  if (!existing) return { ok: false, error: 'Could not save that income. Try again.' };
-
-  Object.assign(existing, parsed.value, { updated_at: touch() });
+  const { supabase } = await requireUser();
+  const { error } = await supabase.from('income').update(parsed.value).eq('id', id);
+  if (error) return { ok: false, error: 'Could not save that income. Try again.' };
 
   refresh();
   return { ok: true };
@@ -48,9 +40,7 @@ export async function updateIncome(_prev: ActionState, fd: FormData): Promise<Ac
 export async function deleteIncome(fd: FormData): Promise<void> {
   const id = String(fd.get('id') ?? '');
   if (!id) return;
-
-  const index = store.income.findIndex((i) => i.id === id);
-  if (index !== -1) store.income.splice(index, 1);
-
+  const { supabase } = await requireUser();
+  await supabase.from('income').delete().eq('id', id);
   refresh();
 }

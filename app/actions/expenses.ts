@@ -1,9 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { requireUser } from '@/lib/supabase/server';
 import { parseExpenseForm, type ActionState } from '@/lib/validation';
-import { DEMO_USER_ID, demoId, store, touch } from '@/lib/demo-store';
-import type { Expense } from '@/lib/types';
 
 function refresh() {
   revalidatePath('/');
@@ -15,15 +14,9 @@ export async function createExpense(_prev: ActionState, fd: FormData): Promise<A
   const parsed = parseExpenseForm(fd);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const now = touch();
-  const expense: Expense = {
-    id: demoId('exp'),
-    user_id: DEMO_USER_ID,
-    ...parsed.value,
-    created_at: now,
-    updated_at: now,
-  };
-  store.expenses.push(expense);
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase.from('expenses').insert({ ...parsed.value, user_id: userId });
+  if (error) return { ok: false, error: 'Could not save that expense. Try again.' };
 
   refresh();
   return { ok: true };
@@ -36,10 +29,9 @@ export async function updateExpense(_prev: ActionState, fd: FormData): Promise<A
   const parsed = parseExpenseForm(fd);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const existing = store.expenses.find((e) => e.id === id);
-  if (!existing) return { ok: false, error: 'Could not save that expense. Try again.' };
-
-  Object.assign(existing, parsed.value, { updated_at: touch() });
+  const { supabase } = await requireUser();
+  const { error } = await supabase.from('expenses').update(parsed.value).eq('id', id);
+  if (error) return { ok: false, error: 'Could not save that expense. Try again.' };
 
   refresh();
   return { ok: true };
@@ -48,9 +40,7 @@ export async function updateExpense(_prev: ActionState, fd: FormData): Promise<A
 export async function deleteExpense(fd: FormData): Promise<void> {
   const id = String(fd.get('id') ?? '');
   if (!id) return;
-
-  const index = store.expenses.findIndex((e) => e.id === id);
-  if (index !== -1) store.expenses.splice(index, 1);
-
+  const { supabase } = await requireUser();
+  await supabase.from('expenses').delete().eq('id', id);
   refresh();
 }
