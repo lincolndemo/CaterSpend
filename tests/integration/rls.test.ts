@@ -58,6 +58,64 @@ describe('row level security', () => {
     expect(error).toBeTruthy();
   });
 
+  it('refuses to let one user update or delete another user expense', async () => {
+    // This is the gap that matters most. Every mutating action in app/actions/*.ts scopes its
+    // update and delete with `.eq('id', id)` and nothing else — deliberately, because RLS is meant
+    // to be the single authorisation point. That makes the `using` clauses on expenses_update and
+    // expenses_delete the only thing standing between a user and someone else's row, given an id.
+    const { data: victim } = await userA.client
+      .from('expenses')
+      .insert({
+        user_id: userA.userId, date: '2026-09-05', amount: 45000, description: 'A row userB must not touch',
+        category_id: categoryId, payment_method: 'Cash',
+      })
+      .select()
+      .single();
+
+    // RLS filters an unauthorised write out rather than rejecting it, so the request succeeds with
+    // zero rows affected. Asserting on `error` would pass while proving nothing; the count is the
+    // only evidence, exactly as the built-in immutability test asserts.
+    const { count: updated } = await userB.client
+      .from('expenses')
+      .update({ amount: 1, description: 'hijacked' }, { count: 'exact' })
+      .eq('id', victim!.id);
+    expect(updated).toBe(0);
+
+    const { count: deleted } = await userB.client
+      .from('expenses')
+      .delete({ count: 'exact' })
+      .eq('id', victim!.id);
+    expect(deleted).toBe(0);
+
+    // And the row is still there, unchanged, when its owner looks.
+    const { data: after } = await userA.client.from('expenses').select('*').eq('id', victim!.id).single();
+    expect(after!.description).toBe('A row userB must not touch');
+    expect(Number(after!.amount)).toBe(45000);
+  });
+
+  it('refuses to let one user update or delete another user job', async () => {
+    const { data: victim } = await userA.client
+      .from('jobs')
+      .insert({ user_id: userA.userId, name: 'Okonkwo Birthday', quoted_amount: 300000 })
+      .select()
+      .single();
+
+    const { count: updated } = await userB.client
+      .from('jobs')
+      .update({ name: 'hijacked', quoted_amount: 1 }, { count: 'exact' })
+      .eq('id', victim!.id);
+    expect(updated).toBe(0);
+
+    const { count: deleted } = await userB.client
+      .from('jobs')
+      .delete({ count: 'exact' })
+      .eq('id', victim!.id);
+    expect(deleted).toBe(0);
+
+    const { data: after } = await userA.client.from('jobs').select('*').eq('id', victim!.id).single();
+    expect(after!.name).toBe('Okonkwo Birthday');
+  });
+
   it('refuses to reach another user category through a composite foreign key', async () => {
     // The FK is (category_id, user_id) -> categories(id, user_id), so userB naming userA's category
     // fails the reference rather than merely the RLS check. This is what stops a caller stitching
