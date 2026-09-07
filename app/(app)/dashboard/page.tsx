@@ -4,20 +4,11 @@ import { BudgetBar } from '@/components/dashboard/BudgetBar';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TruncationNotice } from '@/components/ui/TruncationNotice';
 import { loadWorkspace } from '@/lib/data';
 import { lastNMonthKeys, monthKey, todayISO } from '@/lib/dates';
 import { formatNaira } from '@/lib/money';
 import { categoryTotals, jobFigures, monthlyTotals, sumAmounts } from '@/lib/totals';
-
-// Shown when loadWorkspace() hit a row ceiling, so the figures below are computed from a partial
-// set. Better a visible warning than a confidently wrong number.
-function TruncationNotice() {
-  return (
-    <p role="status" className="card border-[var(--gold)] p-4 text-sm text-[var(--ink-600)]">
-      You have more records than this page can load at once, so these figures may be incomplete.
-    </p>
-  );
-}
 
 export default async function DashboardPage() {
   const { profile, categories, jobs, expenses, income, truncated } = await loadWorkspace();

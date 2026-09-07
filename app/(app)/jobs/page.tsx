@@ -1,13 +1,14 @@
 import { Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { TruncationNotice } from '@/components/ui/TruncationNotice';
 import { JobForm } from '@/components/jobs/JobForm';
 import { JobCard } from '@/components/jobs/JobCard';
 import { loadWorkspace } from '@/lib/data';
 import { jobFigures } from '@/lib/totals';
 
 export default async function JobsPage() {
-  const { jobs, expenses, income } = await loadWorkspace();
+  const { jobs, expenses, income, truncated } = await loadWorkspace();
 
   return (
     <div className="grid gap-5">
@@ -24,6 +25,9 @@ export default async function JobsPage() {
           <JobForm mode="create" />
         </Dialog>
       </div>
+
+      {/* Each card states spend, profit and outstanding from the same possibly-partial arrays. */}
+      {truncated && <TruncationNotice />}
 
       {jobs.length === 0 ? (
         <EmptyState

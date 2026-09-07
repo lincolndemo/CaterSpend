@@ -9,7 +9,7 @@ export type Workspace = {
   jobs: Job[];
   expenses: Expense[];
   income: Income[];
-  /** True when the expense or income read hit a row ceiling, so every figure may understate. */
+  /** True when any read hit a row ceiling, so every figure derived from them may understate. */
   truncated: boolean;
 };
 
@@ -30,8 +30,44 @@ export const EXPORT_LIMIT = 5000;
 // count is missing for any reason, fall back to the length test the ceiling alone allows.
 export function isTruncated(result: { data: unknown[] | null; count: number | null }): boolean {
   const received = result.data?.length ?? 0;
-  if (result.count !== null) return result.count > received;
-  return received >= EXPORT_LIMIT;
+  if (result.count === null) return received >= EXPORT_LIMIT;
+
+  // postgrest-js derives `count` by running `parseInt` over the segment after the slash in
+  // `Content-Range`, so a response that carries rows without an exact total (`0-2/*`) yields NaN.
+  // A count we cannot read is not evidence the data is complete, and this flag exists precisely to
+  // stop partial figures being presented as whole ones. So an unreadable count raises the warning.
+  //
+  // This is the opposite of how the write actions treat an unreadable count, deliberately. On a
+  // write, an ambiguous count means the write most likely landed, so staying quiet avoids telling
+  // the user a successful save failed. On a read, an ambiguous count means we cannot prove the
+  // figures are complete, so warning avoids presenting understated money as fact. Quiet when
+  // unsure about a write, loud when unsure about a read — both resolve toward not misleading.
+  if (Number.isNaN(result.count)) return true;
+
+  return result.count > received;
+}
+
+/**
+ * True only when a write definitively changed nothing.
+ *
+ * The write direction is the mirror of `isTruncated`, and the asymmetry is deliberate. Both face
+ * the same problem — postgrest-js can hand back a `count` that is `NaN` (the `Content-Range` total
+ * was `*`), `null` or `undefined` (not reported at all) — and they resolve it in opposite
+ * directions, because the cost of guessing wrong is opposite:
+ *
+ * - On a **write**, an unreadable count most likely accompanies a write that landed. Treating it
+ *   as failure tells the user their saved record did not save, and sends them to enter it twice.
+ *   So only `count === 0` — a definite zero, which PostgREST does report on a matched-nothing
+ *   UPDATE or DELETE — counts as failure.
+ * - On a **read**, an unreadable count is not evidence the data is complete, and presenting
+ *   understated money as fact is the worst failure a bookkeeping tool can have. So anything
+ *   unreadable raises the truncation warning.
+ *
+ * Quiet when unsure about a write, loud when unsure about a read. Both resolve toward not
+ * misleading the user.
+ */
+export function wroteNoRows(count: number | null | undefined): boolean {
+  return count === 0;
 }
 
 // PostgREST can serialise `numeric` columns as JSON strings depending on configuration, even
@@ -123,16 +159,26 @@ export async function loadWorkspace(): Promise<Workspace> {
 
   const [profile, categories, jobs, expenses, income] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', userId).single(),
-    supabase.from('categories').select('*').order('sort_order').order('name'),
+    // Categories and jobs carry the same explicit ceiling and exact count as the money tables.
+    // A caterer will realistically never reach 1000 categories, but without a count `truncated`
+    // would read `false` on the strength of a query that never checked — the banner would assert
+    // the figures are complete having tested only two of the four reads they are built from.
+    supabase
+      .from('categories')
+      .select('*', { count: 'exact' })
+      .order('sort_order')
+      .order('name')
+      .range(0, EXPORT_LIMIT - 1),
     // Postgres guarantees no order for ties, so equal event dates would otherwise let two job
     // cards swap places between page loads. `created_at` desc reproduces the demo's stable
     // insertion order. Expenses and income need no tie-break: every consumer re-sorts them
     // through `byDateDesc`, which already breaks date ties on `created_at`.
     supabase
       .from('jobs')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('event_date', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .range(0, EXPORT_LIMIT - 1),
     supabase
       .from('expenses')
       .select('*', { count: 'exact' })
@@ -155,6 +201,7 @@ export async function loadWorkspace(): Promise<Workspace> {
     jobs: ((jobs.data ?? []) as JobRow[]).map(toJob),
     expenses: ((expenses.data ?? []) as ExpenseRow[]).map(toExpense),
     income: ((income.data ?? []) as IncomeRow[]).map(toIncome),
-    truncated: isTruncated(expenses) || isTruncated(income),
+    truncated:
+      isTruncated(expenses) || isTruncated(income) || isTruncated(jobs) || isTruncated(categories),
   };
 }

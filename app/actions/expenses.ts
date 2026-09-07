@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { requireUser } from '@/lib/supabase/server';
+import { wroteNoRows } from '@/lib/data';
 import { parseExpenseForm, type ActionState } from '@/lib/validation';
 
 function refresh() {
@@ -38,8 +39,9 @@ export async function updateExpense(_prev: ActionState, fd: FormData): Promise<A
 
   // An UPDATE that matches no row is not a PostgREST error — it returns 204 with a zero count.
   // The row may have been deleted from another tab, or RLS may exclude it. Either way nothing was
-  // written, so do not tell the user it was saved.
-  if (!count) return { ok: false, error: 'Could not save that expense. Try again.' };
+  // written, so do not tell the user it was saved. `wroteNoRows` explains why only a definite zero
+  // qualifies, and why an unreadable count deliberately falls through to success.
+  if (wroteNoRows(count)) return { ok: false, error: 'Could not save that expense. Try again.' };
 
   refresh();
   return { ok: true };

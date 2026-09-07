@@ -1,5 +1,6 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabase } from '@/lib/supabase/server';
@@ -49,7 +50,30 @@ export async function signOut(): Promise<void> {
   // auth server says, so this browser is signed out either way, and an already-expired session
   // makes signOut fail with nothing actually wrong. Log it so a systematic failure is visible.
   const { error } = await supabase.auth.signOut();
-  if (error) console.error('[signOut] revoke failed:', error.message);
+  if (error) {
+    console.error('[signOut] revoke failed:', error.message);
+    // One auth-js path leaves the session intact: `_useSession` fails while the access token is
+    // still valid, so the local session is never removed and no cookie is cleared. The user then
+    // lands on /login, the middleware finds a live session, and bounces them straight back to the
+    // dashboard still signed in — a sign-out button that visibly does nothing. Clearing the
+    // cookies here makes the outcome match what the button says, whatever the auth server did.
+    await clearAuthCookies();
+  }
   revalidatePath('/', 'layout');
   redirect('/login');
+}
+
+/**
+ * Deletes Supabase's auth cookies directly.
+ *
+ * The names are `sb-<project-ref>-auth-token`, optionally chunked with a `.0`/`.1` suffix when the
+ * token exceeds the per-cookie size limit. Matching on the shape rather than composing the name
+ * from the project ref means a chunked token, or a stale cookie from a previous project ref, is
+ * cleared too.
+ */
+async function clearAuthCookies(): Promise<void> {
+  const store = await cookies();
+  for (const { name } of store.getAll()) {
+    if (/^sb-.+-auth-token(\.\d+)?$/.test(name)) store.delete(name);
+  }
 }
