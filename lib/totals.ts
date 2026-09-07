@@ -36,6 +36,7 @@ export function categoryTotals(expenses: Expense[], categories: Category[]): Cat
   const grand = [...totals.values()].reduce((a, b) => a + b, 0);
   if (grand === 0) return [];
   return [...totals.entries()]
+    .filter(([, total]) => total !== 0)
     .map(([id, total]) => {
       const c = byId.get(id)!;
       return {

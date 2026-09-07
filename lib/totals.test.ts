@@ -85,6 +85,18 @@ describe('categoryTotals', () => {
   it('ignores expenses whose category is missing', () => {
     expect(categoryTotals([exp({ category_id: 'gone' })], categories)).toEqual([]);
   });
+
+  it('omits a category whose entries net to zero', () => {
+    const rows = [
+      exp({ id: 'a', category_id: 'c1', amount: 500 }),
+      exp({ id: 'b', category_id: 'c2', amount: 200 }),
+      exp({ id: 'c', category_id: 'c2', amount: -200 }),
+      exp({ id: 'd', category_id: 'c3', amount: 0 }),
+    ];
+    const result = categoryTotals(rows, categories);
+    expect(result.map((r) => r.name)).toEqual(['Ingredients']);
+    expect(result[0].pct).toBe(100);
+  });
 });
 
 describe('monthlyTotals', () => {
