@@ -31,12 +31,20 @@ function shiftDays(iso: string, days: number): string {
 export async function loadSampleData(): Promise<void> {
   const { supabase, userId } = await requireUser();
 
-  const [expenseCount, incomeCount, jobCount] = await Promise.all([
+  const counts = await Promise.all([
     supabase.from('expenses').select('id', { count: 'exact', head: true }),
     supabase.from('income').select('id', { count: 'exact', head: true }),
     supabase.from('jobs').select('id', { count: 'exact', head: true }),
   ]);
-  if ((expenseCount.count ?? 0) + (incomeCount.count ?? 0) + (jobCount.count ?? 0) > 0) return;
+
+  // Fail closed. A count that failed comes back as `count: null` with `error` set, and reading that
+  // null as zero would say "the account is empty" at exactly the moment we cannot tell — seeding
+  // four months of fictional records alongside a user's real ones, with no bulk delete in the UI
+  // and no marker separating the two. An unreadable count is not evidence of an empty account.
+  // Same instinct as `isTruncated` in lib/data.ts: loud when unsure. The cost of being wrong this
+  // way is that the button does nothing on one attempt.
+  if (counts.some((c) => c.error !== null || c.count === null)) return;
+  if (counts.reduce((total, c) => total + (c.count ?? 0), 0) > 0) return;
 
   const today = todayISO();
   const sample = buildSampleData(today);
@@ -130,6 +138,12 @@ export async function loadSampleData(): Promise<void> {
  *
  * Best effort by design. If the undo itself fails there is nothing further to try, and the original
  * error is the one worth showing, so failures here are logged and swallowed rather than thrown.
+ *
+ * Both delete results are inspected rather than discarded. supabase-js does not throw on a
+ * PostgREST error — it resolves with `{ data, error }` — so a policy refusal, a constraint
+ * violation, a statement timeout or a 500 all return normally. Checking only the `try/catch` would
+ * mean the log line above fires for transport failures alone and stays silent for the entire class
+ * of failure this undo exists to handle, leaving a partially seeded account and no trace of it.
  */
 async function undo(
   supabase: Awaited<ReturnType<typeof requireUser>>['supabase'],
@@ -137,8 +151,21 @@ async function undo(
   expenseIds: string[],
 ): Promise<void> {
   try {
-    if (expenseIds.length > 0) await supabase.from('expenses').delete().in('id', expenseIds);
-    if (jobIds.length > 0) await supabase.from('jobs').delete().in('id', jobIds);
+    if (expenseIds.length > 0) {
+      const { error } = await supabase.from('expenses').delete().in('id', expenseIds);
+      if (error) {
+        console.error(
+          `[loadSampleData] could not undo ${expenseIds.length} sample expense(s):`,
+          error.message,
+        );
+      }
+    }
+    if (jobIds.length > 0) {
+      const { error } = await supabase.from('jobs').delete().in('id', jobIds);
+      if (error) {
+        console.error(`[loadSampleData] could not undo ${jobIds.length} sample job(s):`, error.message);
+      }
+    }
   } catch (err) {
     console.error('[loadSampleData] could not undo a partial sample load:', err);
   }
