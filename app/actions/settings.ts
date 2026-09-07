@@ -8,12 +8,10 @@ export async function saveSettings(_prev: ActionState, fd: FormData): Promise<Ac
   const parsed = parseBudgetForm(fd);
   if (!parsed.ok) return { ok: false, error: parsed.error };
 
-  const businessName = String(fd.get('business_name') ?? '').trim();
-
   const { supabase, userId } = await requireUser();
   const { error } = await supabase
     .from('profiles')
-    .update({ business_name: businessName || null, monthly_budget: parsed.value.monthly_budget })
+    .update({ business_name: parsed.value.business_name, monthly_budget: parsed.value.monthly_budget })
     .eq('id', userId);
   if (error) return { ok: false, error: 'Could not save your settings. Try again.' };
 

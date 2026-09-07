@@ -26,9 +26,9 @@ create table public.categories (
 
 alter table public.categories add constraint categories_id_user_uniq unique (id, user_id);
 
+-- No separate (user_id) index: categories_user_name_uniq leads with user_id and serves those scans.
 create unique index categories_user_name_uniq
   on public.categories (user_id, lower(btrim(name)));
-create index categories_user_idx on public.categories (user_id);
 
 -- -------------------------------------------------------------------- jobs
 create table public.jobs (
@@ -60,7 +60,12 @@ create table public.expenses (
   notes text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  foreign key (category_id, user_id) references public.categories(id, user_id) on delete restrict,
+  -- `no action`, not `restrict`: both refuse to delete an in-use category, but `restrict` fires
+  -- immediately, so deleting an auth.users row would abort — the cascade to categories is queued
+  -- before the cascade to expenses. `no action` defers the check to end of statement, letting the
+  -- expenses cascade clear first. Never `cascade`/`set null` here: a category deletion must not
+  -- destroy or orphan expense records.
+  foreign key (category_id, user_id) references public.categories(id, user_id) on delete no action,
   foreign key (job_id, user_id)      references public.jobs(id, user_id)       on delete set null (job_id)
 );
 
@@ -120,8 +125,10 @@ create policy profiles_delete on public.profiles for delete to authenticated usi
 
 create policy categories_select on public.categories for select to authenticated using ((select auth.uid()) = user_id);
 create policy categories_insert on public.categories for insert to authenticated with check ((select auth.uid()) = user_id);
+-- `using` sees the OLD row, `with check` the NEW one. Together: custom categories stay editable,
+-- built-ins are untouchable, and neither flag direction can be flipped.
 create policy categories_update on public.categories for update to authenticated
-  using ((select auth.uid()) = user_id)
+  using ((select auth.uid()) = user_id and not is_builtin)
   with check ((select auth.uid()) = user_id and is_builtin = false);
 create policy categories_delete on public.categories for delete to authenticated
   using ((select auth.uid()) = user_id and not is_builtin);
@@ -149,8 +156,11 @@ security definer
 set search_path = public
 as $$
 begin
+  -- `left(..., 200)` matches the profiles check constraint. Signup metadata is caller-controlled,
+  -- and `on conflict` absorbs only 23505/23P01 — a 23514 here would abort the whole GoTrue
+  -- transaction and surface as an opaque "Database error saving new user". Truncate, don't fail.
   insert into public.profiles (id, business_name)
-  values (new.id, nullif(btrim(coalesce(new.raw_user_meta_data ->> 'business_name', '')), ''))
+  values (new.id, left(nullif(btrim(coalesce(new.raw_user_meta_data ->> 'business_name', '')), ''), 200))
   on conflict do nothing;
 
   insert into public.categories (user_id, name, is_builtin, color_light, color_dark, sort_order)

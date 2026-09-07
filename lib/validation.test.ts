@@ -136,18 +136,40 @@ describe('parseCategoryForm', () => {
 
 describe('parseBudgetForm', () => {
   it('accepts a blank budget as null', () => {
-    expect(parseBudgetForm(fd({ monthly_budget: '' }))).toEqual({ ok: true, value: { monthly_budget: null } });
+    expect(parseBudgetForm(fd({ business_name: 'Ada Cuisine', monthly_budget: '' }))).toEqual({
+      ok: true,
+      value: { business_name: 'Ada Cuisine', monthly_budget: null },
+    });
   });
   it('accepts a number', () => {
-    expect(parseBudgetForm(fd({ monthly_budget: '120,000' }))).toEqual({
+    expect(parseBudgetForm(fd({ business_name: 'Ada Cuisine', monthly_budget: '120,000' }))).toEqual({
       ok: true,
-      value: { monthly_budget: 120000 },
+      value: { business_name: 'Ada Cuisine', monthly_budget: 120000 },
     });
   });
   it('rejects nonsense', () => {
-    expect(parseBudgetForm(fd({ monthly_budget: 'lots' }))).toEqual({
+    expect(parseBudgetForm(fd({ business_name: 'Ada Cuisine', monthly_budget: 'lots' }))).toEqual({
       ok: false,
       error: 'Please enter a valid price.',
+    });
+  });
+  it('treats a blank business name as null', () => {
+    expect(parseBudgetForm(fd({ business_name: '   ', monthly_budget: '' }))).toEqual({
+      ok: true,
+      value: { business_name: null, monthly_budget: null },
+    });
+  });
+  it('accepts a business name at the 200-character limit', () => {
+    const name = 'a'.repeat(200);
+    expect(parseBudgetForm(fd({ business_name: name, monthly_budget: '' }))).toEqual({
+      ok: true,
+      value: { business_name: name, monthly_budget: null },
+    });
+  });
+  it('rejects a business name over 200 characters', () => {
+    expect(parseBudgetForm(fd({ business_name: 'a'.repeat(201), monthly_budget: '' }))).toEqual({
+      ok: false,
+      error: 'Business name must be 200 characters or fewer.',
     });
   });
 });

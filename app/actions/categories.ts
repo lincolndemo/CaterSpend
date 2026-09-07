@@ -36,19 +36,19 @@ export async function createCategory(_prev: ActionState, fd: FormData): Promise<
 
 export async function deleteCategory(_prev: ActionState, fd: FormData): Promise<ActionState> {
   const id = String(fd.get('id') ?? '');
-  if (!id) return { ok: false, error: 'Could not remove that category.' };
+  if (!id) return { ok: false, error: ERRORS.categoryNotRemoved };
 
   const { supabase } = await requireUser();
   const { error, count } = await supabase.from('categories').delete({ count: 'exact' }).eq('id', id);
 
   if (error) {
     if (error.code === '23503') return { ok: false, error: ERRORS.categoryInUse };
-    return { ok: false, error: 'Could not remove that category.' };
+    return { ok: false, error: ERRORS.categoryNotRemoved };
   }
 
   // Built-in categories are protected by the `categories_delete` RLS policy (`not is_builtin`):
   // a blocked delete matches zero rows rather than raising an error.
-  if (!count) return { ok: false, error: 'Could not remove that category.' };
+  if (!count) return { ok: false, error: ERRORS.categoryNotRemoved };
 
   refresh();
   return { ok: true };

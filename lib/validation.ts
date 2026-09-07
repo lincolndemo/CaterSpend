@@ -16,7 +16,13 @@ export const ERRORS = {
   price: 'Please enter a valid price.',
   duplicateCategory: 'That category already exists.',
   categoryInUse: "Can't remove — in use by an expense.",
+  categoryNotRemoved: 'Could not remove that category.',
+  // Mirrors the profiles.business_name check constraint, so an over-long name comes back as a
+  // field error instead of an unmapped 23514 from Postgres.
+  businessNameLength: 'Business name must be 200 characters or fewer.',
 } as const;
+
+export const BUSINESS_NAME_MAX = 200;
 
 export type ExpenseInput = {
   date: string;
@@ -45,7 +51,7 @@ export type JobInput = {
 };
 
 export type CategoryInput = { name: string };
-export type BudgetInput = { monthly_budget: number | null };
+export type BudgetInput = { business_name: string | null; monthly_budget: number | null };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -135,9 +141,14 @@ export function parseCategoryForm(fd: FormData): Parsed<CategoryInput> {
 }
 
 export function parseBudgetForm(fd: FormData): Parsed<BudgetInput> {
+  const business_name = optional(fd, 'business_name');
+  if (business_name !== null && business_name.length > BUSINESS_NAME_MAX) {
+    return { ok: false, error: ERRORS.businessNameLength };
+  }
+
   const raw = text(fd, 'monthly_budget');
-  if (raw === '') return { ok: true, value: { monthly_budget: null } };
+  if (raw === '') return { ok: true, value: { business_name, monthly_budget: null } };
   const parsed = parseAmount(raw);
   if (parsed === null || parsed < 0) return { ok: false, error: ERRORS.price };
-  return { ok: true, value: { monthly_budget: parsed } };
+  return { ok: true, value: { business_name, monthly_budget: parsed } };
 }
