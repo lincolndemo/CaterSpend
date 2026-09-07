@@ -3,7 +3,7 @@ import { MonthlyBars } from '@/components/charts/MonthlyBars';
 import { BudgetBar } from '@/components/dashboard/BudgetBar';
 import { KpiCard } from '@/components/dashboard/KpiCard';
 import { RecentActivity } from '@/components/dashboard/RecentActivity';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { SampleDataPrompt } from '@/components/dashboard/SampleDataPrompt';
 import { TruncationNotice } from '@/components/ui/TruncationNotice';
 import { loadWorkspace } from '@/lib/data';
 import { lastNMonthKeys, monthKey, todayISO } from '@/lib/dates';
@@ -26,19 +26,8 @@ export default async function DashboardPage() {
   const slices = categoryTotals(monthExpenses, categories);
   const buckets = monthlyTotals(expenses, income, lastNMonthKeys(6, today));
 
-  // Task 17 swaps this empty state for the sample-data prompt.
   if (expenses.length === 0 && income.length === 0 && jobs.length === 0) {
-    return (
-      <div className="grid gap-5">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl">
-          {profile.business_name ?? 'Welcome to CaterSpend'}
-        </h1>
-        <EmptyState
-          title="Nothing recorded yet"
-          body="Add your first expense, income record or job to see your figures here."
-        />
-      </div>
-    );
+    return <SampleDataPrompt businessName={profile.business_name} />;
   }
 
   return (
