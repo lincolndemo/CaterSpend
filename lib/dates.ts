@@ -41,3 +41,8 @@ export function isSameMonth(iso: string, key: string): boolean {
 function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
+
+export function formatMonthOptions(dates: string[]): { key: string; label: string }[] {
+  const keys = [...new Set(dates.map(monthKey))].sort().reverse();
+  return keys.map((key) => ({ key, label: `${monthLabel(key)} ${key.slice(0, 4)}` }));
+}

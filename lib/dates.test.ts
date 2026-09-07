@@ -7,6 +7,7 @@ import {
   lastNMonthKeys,
   isSameMonth,
   todayISO,
+  formatMonthOptions,
 } from './dates';
 
 describe('parseDateLocal', () => {
@@ -65,5 +66,17 @@ describe('isSameMonth', () => {
 describe('todayISO', () => {
   it('returns a YYYY-MM-DD string', () => {
     expect(todayISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('formatMonthOptions', () => {
+  it('returns unique months, newest first, with readable labels', () => {
+    expect(formatMonthOptions(['2026-09-01', '2026-08-14', '2026-09-30'])).toEqual([
+      { key: '2026-09', label: 'Sep 2026' },
+      { key: '2026-08', label: 'Aug 2026' },
+    ]);
+  });
+  it('returns an empty list for no dates', () => {
+    expect(formatMonthOptions([])).toEqual([]);
   });
 });
