@@ -1,9 +1,10 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { resolveSiteOrigin } from '@/lib/site-url';
 import type { ActionState } from '@/lib/validation';
 
 function creds(fd: FormData) {
@@ -30,13 +31,19 @@ export async function signUp(_prev: ActionState, fd: FormData): Promise<ActionSt
   if (!email || !password) return { ok: false, error: 'Enter your email and password.' };
   if (password.length < 8) return { ok: false, error: 'Password must be at least 8 characters.' };
 
+  // Derived from the request being served, not from an environment variable somebody has to
+  // remember to set. Getting this wrong is invisible: the confirmation email goes out addressed to
+  // an origin that is not this deployment, the user clicks a dead link, the account stays
+  // unconfirmed, and sign-in then refuses it with nothing logged anywhere.
+  const origin = resolveSiteOrigin(await headers());
+
   const supabase = await createServerSupabase();
   const { error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { business_name: businessName || null },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback`,
     },
   });
   if (error) return { ok: false, error: error.message };

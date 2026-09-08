@@ -142,6 +142,16 @@ html, body {
   stroke: var(--slice-dark);
 }
 
+/* The logo is one asset: a dark brown lockup on transparency. That brown sits at roughly 1.2:1
+   against the dark theme's #101513 page, which is not a contrast problem so much as an invisible
+   logo. brightness(0) flattens it to black while preserving the alpha channel, invert(1) takes it
+   to white, and the sepia/saturate pair warms the white to the cream the rest of the dark palette
+   uses. The cost is that the gold coin flattens to the same cream — a purpose-made light variant
+   would keep it gold and let this rule go away. */
+.dark .brand-logo {
+  filter: brightness(0) invert(1) sepia(0.35) saturate(1.7);
+}
+
 /* ---------------------------------------------------------------------------
    Landing page
    --------------------------------------------------------------------------- */
